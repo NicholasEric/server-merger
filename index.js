@@ -26,7 +26,7 @@ function getClient() {
   });
 }
 
-app.post("/", async (req, res) => {
+app.post("/mixer", async (req, res) => {
   try {
     const client = getClient();
     const { item1, item2 } = req.body;
@@ -42,12 +42,85 @@ app.post("/", async (req, res) => {
     });
 
     const imageUrl = result.data[0].url;
+    /*
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const buffer = Buffer.from(response.data, 'binary');
 
     // Send the binary image data with proper header
     res.writeHead(200, { 'Content-Type': 'image/png' });
     res.end(buffer);
+    */
+   res.end(imageUrl)
+
+  } catch (err) {
+    console.error("Error in:", err);
+    res.status(500).json({ error: "Failed to generate image" });
+  }
+});
+
+app.post("/seperator", async (req, res) => {
+  try {
+    const client = getClient();
+    const { items } = req.body;
+    const itemList = items.split(" ");
+    const imgURLs = [];
+
+    for (const item of itemList) {
+      const prompt = `generate a 512x512 dark pixel art of ${item}, centered with a plain transparent background`;
+
+      // 1. Generate
+      const result = await client.images.generate({
+        prompt,
+        size: "1024x1024",
+        n: 1,
+        quality: "standard",
+        style: "vivid",
+      });
+
+      imgURLs.push(result.data[0].url);
+    }
+    /*
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
+
+    // Send the binary image data with proper header
+    res.writeHead(200, { 'Content-Type': 'image/png' });
+    res.end(buffer);
+    */
+    res.end(JSON.stringify(imgURLs));
+    
+
+  } catch (err) {
+    console.error("Error in:", err);
+    res.status(500).json({ error: "Failed to generate image" });
+  }
+});
+
+app.post("/reverser", async (req, res) => {
+  try {
+    const client = getClient();
+    const { item } = req.body;
+    const prompt = `generate a 512x512 dark pixel art of the opposite of ${item} and centered with a plain transparent background`;
+
+    // 1. Generate
+    const result = await client.images.generate({
+      prompt,
+      size: "1024x1024",
+      n: 1,
+      quality: "standard",
+      style: "vivid",
+    });
+
+    const imageUrl = result.data[0].url;
+    /*
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
+
+    // Send the binary image data with proper header
+    res.writeHead(200, { 'Content-Type': 'image/png' });
+    res.end(buffer);
+    */
+    res.end(imageUrl);
     
 
   } catch (err) {
