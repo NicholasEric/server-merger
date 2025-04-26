@@ -2,10 +2,15 @@
 require("dotenv").config();
 const express = require("express");
 const { AzureOpenAI } = require("openai");
-const { removeBackground } = require("@imgly/background-removal-node");
+const axios = require('axios');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
 
 const endpoint = `${process.env.API_URL}?api-version=${process.env.API_VER}`;
 const apiKey = process.env.API_KEY;
@@ -21,10 +26,11 @@ function getClient() {
   });
 }
 
-app.get("/", async (req, res) => {
+app.post("/", async (req, res) => {
   try {
     const client = getClient();
-    const prompt = "generate a 756x756 pixel art of burger made of bananas in the center with a plain background";
+    const { item1, item2 } = req.body;
+    const prompt = `generate a 512x512 dark pixel art of ${item1} made out of ${item2} combined together and centered with a plain transparent background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -36,21 +42,16 @@ app.get("/", async (req, res) => {
     });
 
     const imageUrl = result.data[0].url;
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
 
-    // 2. Remove background
-    const blob = await removeBackground(imageUrl);
-    const arrayBuffer = await blob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // 3. Send as PNG
-    res.writeHead(200, {
-      "Content-Type": "image/png",
-      "Content-Length": buffer.length,
-    });
+    // Send the binary image data with proper header
+    res.writeHead(200, { 'Content-Type': 'image/png' });
     res.end(buffer);
+    
 
   } catch (err) {
-    console.error("Error in /burger:", err);
+    console.error("Error in:", err);
     res.status(500).json({ error: "Failed to generate image" });
   }
 });
