@@ -218,12 +218,12 @@ app.post("/diffuser", async (req, res) => {
 
 app.post("/serve", async (req, res) => {
   try {
-    const { prefer , food } = req.body;
+    const { items } = req.body;
     const completions = await openai.chat.completions.create({
       model: "qwen-turbo-latest",
       messages: [
           { role: "system", content: "Imagine you are a customer in a restaurant. You are given something to eat, and also a preference. Give a number between 1-5 of how satisfied you are based on your satisfaction" },
-          { role: "user", content: `You prefer something ${prefer}. You are given ${food}. Give a rating between 1-5 based on how satisfied you were. Give only one number` }
+          { role: "user", content: `You prefer something ${items[0]}. You are given ${items[1]}. Give a rating between 1-5 based on how satisfied you were. Give only one number` }
       ],
     });
 
