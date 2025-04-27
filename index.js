@@ -172,6 +172,50 @@ app.post("/reverser", async (req, res) => {
   }
 });
 
+app.post("/diffuser", async (req, res) => {
+  try {
+    const { items } = req.body;
+    const completions = await openai.chat.completions.create({
+      model: "qwen-turbo-latest",
+      messages: [
+          { role: "system", content: "when you are given an item, create a lesser degree of that item" },
+          { role: "user", content: `Create the lesser version of a ${items}. Answer only the name` }
+      ],
+    });
+
+    const txtPrompt = completions.choices[0].message.content;
+
+
+    const client = getImageClient();
+    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
+
+    // 1. Generate
+    const result = await client.images.generate({
+      prompt,
+      size: "1024x1024",
+      n: 1,
+      quality: "standard",
+      style: "vivid",
+    });
+
+    const imageUrl = result.data[0].url;
+    /*
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
+
+    // Send the binary image data with proper header
+    res.writeHead(200, { 'Content-Type': 'image/png' });
+    res.end(buffer);
+    */
+    res.end(JSON.stringify([{txt: txtPrompt, img: imageUrl}]));
+    
+
+  } catch (err) {
+    console.error("Error in:", err);
+    res.status(500).json({ error: "Failed to generate image" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Image server listening at port :${port}`);
 });
