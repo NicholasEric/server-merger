@@ -49,7 +49,7 @@ app.post("/mixer", async (req, res) => {
     const txtPrompt = completions.choices[0].message.content;
 
     const client = getImageClient();
-    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
+    const prompt = `generate a 756x756 dark pixel art of ${txtPrompt} and centered with a plain background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -98,7 +98,7 @@ app.post("/seperator", async (req, res) => {
 
     for (let i = 0; i <= 1; i++) {
       const text = txtPrompt.split(",")[i];
-      const prompt = `generate a 512x512 dark pixel art of ${text}, centered with a plain transparent background`;
+      const prompt = `generate a 756x756 dark pixel art of ${text}, centered with a plain background`;
 
       // 1. Generate
       const result = await client.images.generate({
@@ -143,7 +143,7 @@ app.post("/reverser", async (req, res) => {
 
 
     const client = getImageClient();
-    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
+    const prompt = `generate a 756x756 dark pixel art of ${txtPrompt} and centered with a plain background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -187,7 +187,7 @@ app.post("/diffuser", async (req, res) => {
 
 
     const client = getImageClient();
-    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
+    const prompt = `generate a 756x756 dark pixel art of ${txtPrompt} and centered with a plain background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -213,6 +213,28 @@ app.post("/diffuser", async (req, res) => {
   } catch (err) {
     console.error("Error in:", err);
     res.status(500).json({ error: "Failed to generate image" });
+  }
+});
+
+app.post("/serve", async (req, res) => {
+  try {
+    const { prefer , food } = req.body;
+    const completions = await openai.chat.completions.create({
+      model: "qwen-turbo-latest",
+      messages: [
+          { role: "system", content: "Imagine you are a customer in a restaurant. You are given something to eat, and also a preference. Give a number between 1-5 of how satisfied you are based on your satisfaction" },
+          { role: "user", content: `You prefer something ${prefer}. You are given ${food}. Give a rating between 1-5 based on how satisfied you were. Give only one number` }
+      ],
+    });
+
+    const rating = parseInt(completions.choices[0].message.content);
+
+    res.end(JSON.stringify([rating]));
+    
+
+  } catch (err) {
+    console.error("Error in:", err);
+    res.status(500).json({ error: "Failed to generate rating" });
   }
 });
 
