@@ -1,7 +1,7 @@
 // server.js
 require("dotenv").config();
 const express = require("express");
-const { AzureOpenAI } = require("openai");
+const OpenAI= require("openai");
 const axios = require('axios');
 
 
@@ -17,8 +17,8 @@ const apiKey = process.env.API_KEY;
 const apiVersion = process.env.OPENAI_API_VERSION || "2024-02-01";
 const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "dall-e-3";
 
-function getClient() {
-  return new AzureOpenAI({
+function getImageClient() {
+  return new OpenAI.AzureOpenAI({
     endpoint,
     apiKey,
     apiVersion,
@@ -26,11 +26,30 @@ function getClient() {
   });
 }
 
+const openai = new OpenAI(
+    {
+        apiKey: process.env.API_KEY_2,
+        baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    }
+);
+
+
 app.post("/mixer", async (req, res) => {
   try {
-    const client = getClient();
-    const { item1, item2 } = req.body;
-    const prompt = `generate a 512x512 dark pixel art of ${item1} made out of ${item2} combined together and centered with a plain transparent background`;
+    const { items } = req.body;
+    const completions = await openai.chat.completions.create({
+      model: "qwen-turbo-latest",
+      messages: [
+          { role: "system", content: "pretend that you are an infinite craft function that generates an Item from a list of items" },
+          { role: "user", content: `Combine ${items}. Answer only the name` }
+      ],
+    });
+
+
+    const txtPrompt = completions.choices[0].message.content;
+
+    const client = getImageClient();
+    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -50,7 +69,7 @@ app.post("/mixer", async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'image/png' });
     res.end(buffer);
     */
-   res.end(imageUrl)
+   res.end(JSON.stringify([{txt: txtPrompt, img: imageUrl}]));
 
   } catch (err) {
     console.error("Error in:", err);
@@ -59,14 +78,27 @@ app.post("/mixer", async (req, res) => {
 });
 
 app.post("/seperator", async (req, res) => {
+
   try {
-    const client = getClient();
+
     const { items } = req.body;
-    const itemList = items.split(" ");
+    const completions = await openai.chat.completions.create({
+      model: "qwen-turbo-latest",
+      messages: [
+          { role: "system", content: "pretend that you can deconstruct items into two separate items based on their names" },
+          { role: "user", content: `Separate ${items} into two items. Separate the two items with a comma` }
+      ],
+
+    });
+
+    const txtPrompt = completions.choices[0].message.content;
+
+    const client = getImageClient();
     const imgURLs = [];
 
-    for (const item of itemList) {
-      const prompt = `generate a 512x512 dark pixel art of ${item}, centered with a plain transparent background`;
+    for (let i = 0; i <= 1; i++) {
+      const text = txtPrompt.split(",")[i];
+      const prompt = `generate a 512x512 dark pixel art of ${text}, centered with a plain transparent background`;
 
       // 1. Generate
       const result = await client.images.generate({
@@ -77,7 +109,7 @@ app.post("/seperator", async (req, res) => {
         style: "vivid",
       });
 
-      imgURLs.push(result.data[0].url);
+      imgURLs.push({ txt: text , img: result.data[0].url});
     }
     /*
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
@@ -98,7 +130,7 @@ app.post("/seperator", async (req, res) => {
 
 app.post("/reverser", async (req, res) => {
   try {
-    const client = getClient();
+    const client = getImageClient();
     const { item } = req.body;
     const prompt = `generate a 512x512 dark pixel art of the opposite of ${item} and centered with a plain transparent background`;
 
@@ -130,5 +162,5 @@ app.post("/reverser", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Image server listening at http://localhost:${port}`);
+  console.log(`Image server listening at port :${port}`);
 });
