@@ -130,9 +130,20 @@ app.post("/seperator", async (req, res) => {
 
 app.post("/reverser", async (req, res) => {
   try {
+    const { items } = req.body;
+    const completions = await openai.chat.completions.create({
+      model: "qwen-turbo-latest",
+      messages: [
+          { role: "system", content: "pretend that you are a God, and you can create the exact opposite of a given item" },
+          { role: "user", content: `Create the opposite of ${items}. Answer only the name` }
+      ],
+    });
+
+    const txtPrompt = completions.choices[0].message.content;
+
+
     const client = getImageClient();
-    const { item } = req.body;
-    const prompt = `generate a 512x512 dark pixel art of the opposite of ${item} and centered with a plain transparent background`;
+    const prompt = `generate a 512x512 dark pixel art of ${txtPrompt} and centered with a plain transparent background`;
 
     // 1. Generate
     const result = await client.images.generate({
@@ -152,7 +163,7 @@ app.post("/reverser", async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'image/png' });
     res.end(buffer);
     */
-    res.end(imageUrl);
+    res.end(JSON.stringify([{txt: txtPrompt, img: imageUrl}]));
     
 
   } catch (err) {
